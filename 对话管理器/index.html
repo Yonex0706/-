@@ -1,0 +1,1494 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DeepSeek 对话管理器</title>
+  <style>
+    :root{
+      --bg:#f7f7f5;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --text:#111827;
+      --border:#e5e7eb;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --blue:#2563eb;
+      --blue-weak:#dbeafe;
+      --green:#16a34a;
+      --green-weak:#dcfce7;
+      --danger:#ef4444;
+      --warning:#f59e0b;
+      --radius:14px;
+      --radius-sm:10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .app{
+      min-height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background: rgba(247,247,245,.9);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .topbar-inner{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .brand-badge{
+      width:34px;height:34px;
+      border-radius:12px;
+      background: linear-gradient(135deg, var(--blue), #7c3aed);
+      box-shadow: 0 10px 22px rgba(37,99,235,.22);
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-weight:800;
+      font-family: var(--mono);
+      font-size:14px;
+    }
+    .topbar-spacer{ flex:1; }
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      display:none;
+    }
+    @media (min-width: 960px){
+      .hint{ display:block; }
+    }
+
+    .container{
+      width:100%;
+      max-width:1180px;
+      margin: 0 auto;
+      padding: 14px 16px 20px;
+      flex:1;
+      display:flex;
+      gap:14px;
+      align-items:stretch;
+      min-height: 0;
+    }
+
+    .sidebar{
+      width:280px;
+      min-width:280px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+
+    .main{
+      flex:1;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+
+    @media (max-width: 840px){
+      .container{ flex-direction:column; }
+      .sidebar{ width:100%; min-width:0; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card-header{
+      padding: 12px 12px 10px;
+      border-bottom:1px solid rgba(229,231,235,.7);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card-header h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.2px;
+    }
+    .card-body{
+      padding: 12px;
+    }
+
+    .row{ display:flex; gap:10px; align-items:center; }
+    .row.wrap{ flex-wrap:wrap; }
+    .row.space{ justify-content:space-between; }
+    .grow{ flex:1; min-width:0; }
+
+    .input, .select, .textarea{
+      width:100%;
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline:none;
+      font-size: 13px;
+      color:var(--text);
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    .textarea{ min-height: 130px; resize: vertical; line-height:1.45; }
+    .input:focus, .select:focus, .textarea:focus{
+      border-color: rgba(37,99,235,.45);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+    .select{ padding:10px 10px; }
+
+    .btn{
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--text);
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .btn:hover{
+      border-color: rgba(17,24,39,.18);
+      box-shadow: 0 10px 20px rgba(0,0,0,.05);
+      transform: translateY(-1px);
+    }
+    .btn:active{ transform: translateY(0); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(37,99,235,.95), rgba(124,58,237,.95));
+      border-color: rgba(37,99,235,.35);
+      color:#fff;
+      box-shadow: 0 12px 26px rgba(37,99,235,.22);
+    }
+    .btn.primary:hover{ box-shadow: 0 14px 28px rgba(37,99,235,.25); }
+    .btn.danger{
+      border-color: rgba(239,68,68,.35);
+      color: #b91c1c;
+      background: #fff;
+    }
+    .btn.ghost{
+      border-color: transparent;
+      background: transparent;
+      box-shadow:none;
+    }
+    .btn.small{
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      gap:6px;
+    }
+
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 7px;
+      border:1px solid var(--border);
+      border-bottom-width:2px;
+      border-radius: 8px;
+      background:#fff;
+      color: #374151;
+    }
+
+    .session-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height: 100%;
+      min-height: 0;
+    }
+    .session-scroll{
+      overflow:auto;
+      padding: 2px 6px 10px;
+      margin: -2px -6px -10px;
+      min-height: 0;
+    }
+    .session-item{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius: 14px;
+      padding: 10px 10px;
+      cursor:pointer;
+      transition: border-color .15s ease, transform .06s ease, box-shadow .15s ease;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .session-item:hover{
+      border-color: rgba(17,24,39,.18);
+      box-shadow: 0 10px 20px rgba(0,0,0,.05);
+      transform: translateY(-1px);
+    }
+    .session-item.active{
+      border-color: rgba(37,99,235,.42);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10), 0 14px 24px rgba(0,0,0,.06);
+    }
+    .session-title{
+      font-weight: 650;
+      font-size: 13px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .session-meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(229,231,235,.9);
+      background: rgba(249,250,251,.8);
+    }
+
+    .empty{
+      padding: 26px 18px;
+      text-align:center;
+      color: var(--muted);
+    }
+    .empty .big{
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+    .empty .title{
+      color: var(--text);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .empty .desc{ font-size: 13px; line-height: 1.55; }
+
+    .main-header{
+      padding: 12px 12px 10px;
+      border-bottom:1px solid rgba(229,231,235,.7);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .main-title{
+      min-width:0;
+    }
+    .main-title h1{
+      margin:0;
+      font-size: 15px;
+      letter-spacing: .2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .main-title .sub{
+      margin-top:6px;
+      color: var(--muted);
+      font-size: 12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .messages{
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:auto;
+      min-height: 0;
+    }
+
+    .msg{
+      position:relative;
+      border:1px solid var(--border);
+      border-radius: 14px;
+      background:#fff;
+      padding: 10px 12px 10px 14px;
+      display:flex;
+      gap:10px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.02);
+    }
+    .msg::before{
+      content:"";
+      width:4px;
+      border-radius: 999px;
+      margin-left: -6px;
+    }
+    .msg.user{
+      border-color: rgba(37,99,235,.25);
+      background: linear-gradient(0deg, rgba(219,234,254,.22), rgba(255,255,255,1));
+    }
+    .msg.user::before{ background: var(--blue); }
+    .msg.agent{
+      border-color: rgba(22,163,74,.22);
+      background: linear-gradient(0deg, rgba(220,252,231,.18), rgba(255,255,255,1));
+    }
+    .msg.agent::before{ background: var(--green); }
+
+    .msg-left{
+      min-width:0;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .msg-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .role{
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .2px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .role .tag{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(229,231,235,.9);
+      color: #374151;
+      background: rgba(249,250,251,.8);
+    }
+    .time{
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+    .msg-content{
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+      font-size: 13px;
+      color: #0f172a;
+    }
+    .msg-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .muted{ color: var(--muted); }
+
+    .inline-editor{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .inline-editor .textarea{
+      min-height: 120px;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+    .divider{
+      height:1px;
+      background: rgba(229,231,235,.8);
+      margin: 8px 0;
+    }
+
+    .footer-bar{
+      padding: 12px;
+      border-top: 1px solid rgba(229,231,235,.7);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(15,23,42,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal-backdrop.show{ display:flex; }
+    .modal{
+      width: min(520px, 100%);
+      background:#fff;
+      border-radius: 16px;
+      border:1px solid rgba(229,231,235,.9);
+      box-shadow: 0 18px 50px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .modal-head{
+      padding: 14px 14px 10px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom:1px solid rgba(229,231,235,.7);
+    }
+    .modal-title{
+      margin:0;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .modal-body{ padding: 12px 14px; color:#111827; font-size:13px; line-height:1.55; }
+    .modal-actions{
+      padding: 12px 14px 14px;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      border-top: 1px solid rgba(229,231,235,.7);
+      background: rgba(249,250,251,.6);
+    }
+
+    /* Toast */
+    .toast-wrap{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 60;
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:center;
+    }
+    .toast{
+      pointer-events:none;
+      opacity:0;
+      transform: translateY(10px);
+      transition: opacity .18s ease, transform .18s ease;
+      background: rgba(17,24,39,.92);
+      color:#fff;
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.25);
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateY(0);
+    }
+
+    .help{
+      font-size:12px;
+      color: var(--muted);
+      line-height:1.55;
+    }
+    .help code{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(229,231,235,.9);
+      background: rgba(249,250,251,.8);
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-badge">DS</div>
+          <div>DeepSeek 对话管理器</div>
+        </div>
+        <div class="topbar-spacer"></div>
+        <div class="hint">提示：复制/编辑都在消息卡片右侧；所有数据保存在本地浏览器。</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="card">
+          <div class="card-header">
+            <h2>会话</h2>
+            <button class="btn primary small" id="btnNewSession">＋ 新建</button>
+          </div>
+          <div class="card-body">
+            <div class="row wrap">
+              <div class="grow">
+                <input class="input" id="sessionSearch" placeholder="搜索会话标题…" />
+              </div>
+              <div style="width: 160px;">
+                <select class="select" id="sessionSort">
+                  <option value="updated_desc">按更新时间 ↓</option>
+                  <option value="updated_asc">按更新时间 ↑</option>
+                  <option value="created_desc">按创建时间 ↓</option>
+                  <option value="created_asc">按创建时间 ↑</option>
+                  <option value="title_asc">按标题 A→Z</option>
+                </select>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="session-list">
+              <div class="session-scroll" id="sessionList"></div>
+            </div>
+            <div class="help" style="margin-top:10px;">
+              命名规则：默认 <code>YYYY-MM-DD_001</code> 递增；也可在右侧重命名。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div class="main">
+        <div class="card" style="display:flex; flex-direction:column; min-height: 0;">
+          <div class="main-header" id="mainHeader"></div>
+          <div class="messages" id="messageList"></div>
+          <div class="footer-bar" id="mainFooter"></div>
+        </div>
+
+        <div class="card" id="importCard" style="display:none;">
+          <div class="card-header">
+            <h2>批量导入（粘贴 DeepSeek 导出文本）</h2>
+            <button class="btn small" id="btnCloseImport">关闭</button>
+          </div>
+          <div class="card-body">
+            <div class="help" style="margin-bottom:10px;">
+              支持识别分隔前缀：<code>用户：</code>、<code>DeepSeek：</code>（也兼容 <code>Assistant：</code>、<code>智能体：</code>）。同一角色的多行内容会自动合并。
+            </div>
+            <textarea class="textarea" id="importText" placeholder="把 DeepSeek 导出的对话原文粘贴到这里…&#10;&#10;用户：你好&#10;DeepSeek：你好！有什么可以帮你？"></textarea>
+            <div class="row wrap" style="margin-top:10px; justify-content:space-between;">
+              <div class="row wrap" style="gap:8px;">
+                <button class="btn" id="btnImportPreview">预览解析</button>
+                <button class="btn primary" id="btnImportApply">导入到当前会话</button>
+                <button class="btn" id="btnImportClear">清空</button>
+              </div>
+              <div class="muted" id="importStats" style="font-size:12px;"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="card" style="box-shadow:none; background:rgba(249,250,251,.65); border-style:dashed;">
+              <div class="card-body" id="importPreview">
+                <div class="muted" style="font-size:13px;">点击“预览解析”在这里查看将要导入的消息。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h3 class="modal-title" id="modalTitle">确认</h3>
+        <button class="btn small ghost" id="modalCloseBtn">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    (function(){
+      "use strict";
+
+      const STORAGE_KEY = "ds_dialog_manager_v1";
+
+      /** @type {{sessions: Session[], selectedSessionId: string|null}} */
+      let state = {
+        sessions: [],
+        selectedSessionId: null
+      };
+
+      /** @typedef {{id:string,title:string,createdAt:number,updatedAt:number,messages:Message[]}} Session */
+      /** @typedef {{id:string,role:"user"|"agent",content:string,createdAt:number,updatedAt:number}} Message */
+
+      // Elements
+      const elSessionList = document.getElementById("sessionList");
+      const elSessionSearch = document.getElementById("sessionSearch");
+      const elSessionSort = document.getElementById("sessionSort");
+      const elBtnNewSession = document.getElementById("btnNewSession");
+
+      const elMainHeader = document.getElementById("mainHeader");
+      const elMessageList = document.getElementById("messageList");
+      const elMainFooter = document.getElementById("mainFooter");
+
+      const elImportCard = document.getElementById("importCard");
+      const elBtnCloseImport = document.getElementById("btnCloseImport");
+      const elImportText = document.getElementById("importText");
+      const elBtnImportPreview = document.getElementById("btnImportPreview");
+      const elBtnImportApply = document.getElementById("btnImportApply");
+      const elBtnImportClear = document.getElementById("btnImportClear");
+      const elImportPreview = document.getElementById("importPreview");
+      const elImportStats = document.getElementById("importStats");
+
+      const elModalBackdrop = document.getElementById("modalBackdrop");
+      const elModalTitle = document.getElementById("modalTitle");
+      const elModalBody = document.getElementById("modalBody");
+      const elModalActions = document.getElementById("modalActions");
+      const elModalCloseBtn = document.getElementById("modalCloseBtn");
+
+      const elToastWrap = document.getElementById("toastWrap");
+
+      // ---------- Utilities ----------
+      const uid = () => Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+      const now = () => Date.now();
+      const pad3 = (n) => String(n).padStart(3, "0");
+      const fmtDate = (ms) => {
+        const d = new Date(ms);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      };
+      const fmtTime = (ms) => {
+        const d = new Date(ms);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mi = String(d.getMinutes()).padStart(2, "0");
+        const ss = String(d.getSeconds()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+      };
+      const safeFilename = (name) => (name || "session")
+        .replace(/[\\/:*?"<>|]+/g, "_")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 120);
+
+      function toast(text, icon="✅"){
+        const t = document.createElement("div");
+        t.className = "toast";
+        t.textContent = `${icon} ${text}`;
+        elToastWrap.appendChild(t);
+        requestAnimationFrame(() => t.classList.add("show"));
+        setTimeout(() => {
+          t.classList.remove("show");
+          setTimeout(() => t.remove(), 220);
+        }, 1500);
+      }
+
+      /** @param {{title:string, body:string, dangerText?:string, confirmText?:string, cancelText?:string, onConfirm:()=>void}} opts */
+      function confirmModal(opts){
+        elModalTitle.textContent = opts.title || "确认";
+        elModalBody.textContent = opts.body || "";
+        elModalActions.innerHTML = "";
+
+        const btnCancel = document.createElement("button");
+        btnCancel.className = "btn";
+        btnCancel.textContent = opts.cancelText || "取消";
+        btnCancel.addEventListener("click", closeModal);
+
+        const btnConfirm = document.createElement("button");
+        btnConfirm.className = "btn " + (opts.dangerText ? "danger" : "primary");
+        btnConfirm.textContent = opts.dangerText || opts.confirmText || "确定";
+        btnConfirm.addEventListener("click", () => {
+          closeModal();
+          opts.onConfirm && opts.onConfirm();
+        });
+
+        elModalActions.appendChild(btnCancel);
+        elModalActions.appendChild(btnConfirm);
+
+        openModal();
+      }
+
+      function openModal(){
+        elModalBackdrop.classList.add("show");
+        elModalBackdrop.setAttribute("aria-hidden", "false");
+      }
+      function closeModal(){
+        elModalBackdrop.classList.remove("show");
+        elModalBackdrop.setAttribute("aria-hidden", "true");
+      }
+
+      // Close modal events
+      elModalCloseBtn.addEventListener("click", closeModal);
+      elModalBackdrop.addEventListener("click", (e) => {
+        if(e.target === elModalBackdrop) closeModal();
+      });
+      document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape" && elModalBackdrop.classList.contains("show")) closeModal();
+      });
+
+      // ---------- Storage ----------
+      function load(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if(!raw) return;
+          const parsed = JSON.parse(raw);
+          if(parsed && Array.isArray(parsed.sessions)){
+            state.sessions = parsed.sessions;
+            state.selectedSessionId = parsed.selectedSessionId || (state.sessions[0]?.id ?? null);
+          }
+        }catch(err){
+          console.warn("load failed:", err);
+        }
+      }
+
+      function save(){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      // ---------- Session helpers ----------
+      function getSelectedSession(){
+        return state.sessions.find(s => s.id === state.selectedSessionId) || null;
+      }
+
+      function computeAutoTitle(){
+        const today = fmtDate(now());
+        const prefix = `${today}_`;
+        const used = new Set(
+          state.sessions
+            .map(s => s.title)
+            .filter(t => typeof t === "string" && t.startsWith(prefix))
+        );
+        let i = 1;
+        while(true){
+          const candidate = `${prefix}${pad3(i)}`;
+          if(!used.has(candidate)) return candidate;
+          i++;
+        }
+      }
+
+      function createSession(){
+        const t = now();
+        const session = {
+          id: uid(),
+          title: computeAutoTitle(),
+          createdAt: t,
+          updatedAt: t,
+          messages: []
+        };
+        state.sessions.unshift(session);
+        state.selectedSessionId = session.id;
+        save();
+        renderAll();
+        toast("已创建新会话");
+      }
+
+      function renameSession(sessionId, newTitle){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const title = (newTitle || "").trim();
+        if(!title) return;
+        s.title = title;
+        s.updatedAt = now();
+        save();
+        renderAll();
+        toast("会话已重命名");
+      }
+
+      function deleteSession(sessionId){
+        const idx = state.sessions.findIndex(x => x.id === sessionId);
+        if(idx < 0) return;
+        state.sessions.splice(idx, 1);
+        if(state.selectedSessionId === sessionId){
+          state.selectedSessionId = state.sessions[0]?.id ?? null;
+        }
+        save();
+        renderAll();
+        toast("会话已删除", "🗑️");
+      }
+
+      function exportSessionMarkdown(sessionId){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const lines = [];
+        lines.push(`# ${s.title}`);
+        lines.push("");
+        lines.push(`- 创建时间：${fmtTime(s.createdAt)}`);
+        lines.push(`- 最后更新：${fmtTime(s.updatedAt)}`);
+        lines.push(`- 消息条数：${s.messages.length}`);
+        lines.push("");
+        lines.push("---");
+        lines.push("");
+        for(const m of s.messages){
+          const who = m.role === "user" ? "用户" : "DeepSeek";
+          lines.push(`## ${who}（${fmtTime(m.createdAt)}）`);
+          lines.push("");
+          lines.push(m.content || "");
+          lines.push("");
+        }
+        const md = lines.join("\n");
+        const blob = new Blob([md], {type: "text/markdown;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeFilename(s.title)}.md`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast("已导出 Markdown", "📄");
+      }
+
+      // ---------- Message helpers ----------
+      function addMessage(sessionId, role, content){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const t = now();
+        /** @type {Message} */
+        const msg = {
+          id: uid(),
+          role,
+          content: (content || "").trim(),
+          createdAt: t,
+          updatedAt: t
+        };
+        s.messages.push(msg);
+        s.updatedAt = t;
+        save();
+        renderMain();
+        renderSidebar();
+        toast(role === "user" ? "已新增用户消息" : "已新增智能体消息");
+      }
+
+      function updateMessage(sessionId, messageId, newContent){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const m = s.messages.find(x => x.id === messageId);
+        if(!m) return;
+        m.content = (newContent || "").trim();
+        m.updatedAt = now();
+        s.updatedAt = m.updatedAt;
+        save();
+        renderMain();
+        renderSidebar();
+        toast("已保存");
+      }
+
+      function deleteMessage(sessionId, messageId){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const idx = s.messages.findIndex(x => x.id === messageId);
+        if(idx < 0) return;
+        s.messages.splice(idx, 1);
+        s.updatedAt = now();
+        save();
+        renderMain();
+        renderSidebar();
+        toast("消息已删除", "🗑️");
+      }
+
+      async function copyText(text){
+        try{
+          await navigator.clipboard.writeText(text);
+          toast("已复制", "📋");
+        }catch{
+          // fallback
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+          toast("已复制", "📋");
+        }
+      }
+
+      // ---------- Import parsing ----------
+      const ROLE_PATTERNS = [
+        { role: "user", re: /^\s*(用户|User)\s*：\s*/i },
+        { role: "agent", re: /^\s*(DeepSeek|Assistant|智能体|AI)\s*：\s*/i },
+      ];
+
+      /** @param {string} text */
+      function parseBulkText(text){
+        const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
+        /** @type {{role:"user"|"agent", content:string}[]} */
+        const chunks = [];
+
+        let curRole = null;
+        let cur = [];
+
+        const flush = () => {
+          const content = cur.join("\n").trimEnd();
+          if(curRole && content.trim()){
+            chunks.push({ role: curRole, content: content.trim() });
+          }
+          curRole = null;
+          cur = [];
+        };
+
+        for(const rawLine of lines){
+          const line = rawLine ?? "";
+          let matched = false;
+          for(const p of ROLE_PATTERNS){
+            const m = line.match(p.re);
+            if(m){
+              flush();
+              curRole = /** @type {"user"|"agent"} */(p.role);
+              cur.push(line.replace(p.re, ""));
+              matched = true;
+              break;
+            }
+          }
+          if(matched) continue;
+
+          // Non-role line: append to current chunk if any, otherwise ignore leading noise
+          if(curRole){
+            cur.push(line);
+          }
+        }
+        flush();
+        return chunks;
+      }
+
+      function renderImportPreview(){
+        const chunks = parseBulkText(elImportText.value);
+        elImportStats.textContent = chunks.length ? `识别到 ${chunks.length} 条消息` : "未识别到可导入的消息";
+        elImportPreview.innerHTML = "";
+        if(!chunks.length){
+          const d = document.createElement("div");
+          d.className = "muted";
+          d.style.fontSize = "13px";
+          d.textContent = "没有匹配到“用户：/DeepSeek：”结构。请确认每段开头包含前缀。";
+          elImportPreview.appendChild(d);
+          return;
+        }
+        for(const c of chunks.slice(0, 30)){
+          const wrap = document.createElement("div");
+          wrap.className = "msg " + (c.role === "user" ? "user" : "agent");
+          wrap.style.margin = "10px 0";
+          wrap.style.boxShadow = "none";
+          const left = document.createElement("div");
+          left.className = "msg-left";
+          const top = document.createElement("div");
+          top.className = "msg-top";
+          const role = document.createElement("div");
+          role.className = "role";
+          role.textContent = c.role === "user" ? "用户提问" : "智能体回复";
+          const time = document.createElement("div");
+          time.className = "time";
+          time.textContent = "（预览）";
+          top.appendChild(role);
+          top.appendChild(time);
+          const content = document.createElement("div");
+          content.className = "msg-content";
+          content.textContent = c.content;
+          left.appendChild(top);
+          left.appendChild(content);
+          wrap.appendChild(left);
+          elImportPreview.appendChild(wrap);
+        }
+        if(chunks.length > 30){
+          const more = document.createElement("div");
+          more.className = "muted";
+          more.style.fontSize = "12px";
+          more.textContent = `仅预览前 30 条，共 ${chunks.length} 条。`;
+          elImportPreview.appendChild(more);
+        }
+      }
+
+      function applyImportToSelectedSession(){
+        const s = getSelectedSession();
+        if(!s){
+          toast("请先创建/选择一个会话", "⚠️");
+          return;
+        }
+        const chunks = parseBulkText(elImportText.value);
+        if(!chunks.length){
+          toast("没有可导入内容", "⚠️");
+          return;
+        }
+        const t = now();
+        for(const c of chunks){
+          s.messages.push({
+            id: uid(),
+            role: c.role,
+            content: c.content,
+            createdAt: t,
+            updatedAt: t
+          });
+        }
+        s.updatedAt = now();
+        save();
+        renderAll();
+        toast(`已导入 ${chunks.length} 条消息`, "📥");
+      }
+
+      // ---------- Rendering ----------
+      function renderSidebar(){
+        const q = (elSessionSearch.value || "").trim().toLowerCase();
+        const sort = elSessionSort.value;
+
+        /** @type {Session[]} */
+        let items = state.sessions.slice();
+
+        if(q){
+          items = items.filter(s => (s.title || "").toLowerCase().includes(q));
+        }
+
+        items.sort((a,b) => {
+          switch(sort){
+            case "updated_desc": return b.updatedAt - a.updatedAt;
+            case "updated_asc": return a.updatedAt - b.updatedAt;
+            case "created_desc": return b.createdAt - a.createdAt;
+            case "created_asc": return a.createdAt - b.createdAt;
+            case "title_asc": return (a.title || "").localeCompare((b.title || ""), "zh-Hans-CN");
+            default: return b.updatedAt - a.updatedAt;
+          }
+        });
+
+        elSessionList.innerHTML = "";
+        if(!state.sessions.length){
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.innerHTML = `
+            <div class="big">🗂️</div>
+            <div class="title">还没有会话</div>
+            <div class="desc">点击左上角 <b>＋ 新建</b> 创建一个会话，或在右侧导入已有 DeepSeek 对话。</div>
+          `;
+          elSessionList.appendChild(empty);
+          return;
+        }
+
+        if(!items.length){
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.innerHTML = `
+            <div class="big">🔎</div>
+            <div class="title">没有匹配的会话</div>
+            <div class="desc">换个关键词试试，或清空搜索框。</div>
+          `;
+          elSessionList.appendChild(empty);
+          return;
+        }
+
+        for(const s of items){
+          const item = document.createElement("div");
+          item.className = "session-item" + (s.id === state.selectedSessionId ? " active" : "");
+          item.addEventListener("click", () => {
+            state.selectedSessionId = s.id;
+            save();
+            renderAll();
+          });
+
+          const title = document.createElement("div");
+          title.className = "session-title";
+          title.textContent = s.title || "(未命名)";
+
+          const meta = document.createElement("div");
+          meta.className = "session-meta";
+
+          const pillCount = document.createElement("span");
+          pillCount.className = "pill";
+          pillCount.textContent = `💬 ${s.messages.length}`;
+
+          const pillUpdated = document.createElement("span");
+          pillUpdated.className = "pill";
+          pillUpdated.textContent = `🕒 ${fmtTime(s.updatedAt)}`;
+
+          meta.appendChild(pillCount);
+          meta.appendChild(pillUpdated);
+
+          item.appendChild(title);
+          item.appendChild(meta);
+          elSessionList.appendChild(item);
+        }
+      }
+
+      function renderMain(){
+        const s = getSelectedSession();
+        elMainHeader.innerHTML = "";
+        elMessageList.innerHTML = "";
+        elMainFooter.innerHTML = "";
+
+        if(!s){
+          elMainHeader.innerHTML = `
+            <div class="main-title">
+              <h1>未选择会话</h1>
+              <div class="sub">
+                <span>先创建一个会话开始记录对话。</span>
+              </div>
+            </div>
+            <div class="row wrap">
+              <button class="btn primary" id="mainNewSession">＋ 新建会话</button>
+            </div>
+          `;
+          document.getElementById("mainNewSession").addEventListener("click", createSession);
+
+          elMessageList.innerHTML = `
+            <div class="empty card" style="box-shadow:none;">
+              <div class="big">✨</div>
+              <div class="title">欢迎使用 DeepSeek 对话管理器</div>
+              <div class="desc">
+                左侧管理会话，右侧管理消息。所有数据保存在本地 <b>localStorage</b>，刷新不会丢失。<br/>
+                你也可以用“批量导入”把 DeepSeek 导出的对话粘贴进来。
+              </div>
+            </div>
+          `;
+          elMainFooter.innerHTML = `
+            <div class="row wrap" style="gap:8px;">
+              <button class="btn" id="btnToggleImport0">📥 批量导入</button>
+            </div>
+            <div class="help">建议：先新建会话，再导入对话内容。</div>
+          `;
+          document.getElementById("btnToggleImport0").addEventListener("click", () => toggleImport(true));
+          return;
+        }
+
+        // Header
+        const headerLeft = document.createElement("div");
+        headerLeft.className = "main-title";
+
+        const titleRow = document.createElement("h1");
+        titleRow.textContent = s.title || "(未命名)";
+
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.innerHTML = `
+          <span>创建：${fmtTime(s.createdAt)}</span>
+          <span>更新：${fmtTime(s.updatedAt)}</span>
+          <span>消息：${s.messages.length}</span>
+        `;
+
+        headerLeft.appendChild(titleRow);
+        headerLeft.appendChild(sub);
+
+        const headerRight = document.createElement("div");
+        headerRight.className = "row wrap";
+
+        const btnRename = document.createElement("button");
+        btnRename.className = "btn small";
+        btnRename.textContent = "✏️ 重命名";
+        btnRename.addEventListener("click", () => openRenameInline(s.id));
+
+        const btnExport = document.createElement("button");
+        btnExport.className = "btn small";
+        btnExport.textContent = "📄 导出 Markdown";
+        btnExport.addEventListener("click", () => exportSessionMarkdown(s.id));
+
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "btn small danger";
+        btnDelete.textContent = "🗑️ 删除会话";
+        btnDelete.addEventListener("click", () => {
+          confirmModal({
+            title: "删除会话",
+            body: `确定删除会话“${s.title}”吗？该操作不可恢复。`,
+            dangerText: "确认删除",
+            onConfirm: () => deleteSession(s.id)
+          });
+        });
+
+        headerRight.appendChild(btnRename);
+        headerRight.appendChild(btnExport);
+        headerRight.appendChild(btnDelete);
+
+        elMainHeader.appendChild(headerLeft);
+        elMainHeader.appendChild(headerRight);
+
+        // Messages
+        if(!s.messages.length){
+          const empty = document.createElement("div");
+          empty.className = "empty card";
+          empty.style.boxShadow = "none";
+          empty.innerHTML = `
+            <div class="big">💬</div>
+            <div class="title">这个会话还没有消息</div>
+            <div class="desc">
+              你可以手动新增一条“用户提问/智能体回复”，或用“批量导入”快速填充内容。
+            </div>
+          `;
+          elMessageList.appendChild(empty);
+        }else{
+          for(const m of s.messages){
+            elMessageList.appendChild(renderMessageCard(s.id, m));
+          }
+        }
+
+        // Footer actions
+        elMainFooter.innerHTML = `
+          <div class="row wrap" style="gap:8px;">
+            <button class="btn primary" id="btnAddUser">＋ 新增用户提问</button>
+            <button class="btn primary" id="btnAddAgent">＋ 新增智能体回复</button>
+            <button class="btn" id="btnToggleImport">📥 批量导入</button>
+          </div>
+          <div class="help">编辑为原地编辑；删除均有二次确认；复制后会显示“已复制”提示。</div>
+        `;
+        document.getElementById("btnAddUser").addEventListener("click", () => addMessage(s.id, "user", ""));
+        document.getElementById("btnAddAgent").addEventListener("click", () => addMessage(s.id, "agent", ""));
+        document.getElementById("btnToggleImport").addEventListener("click", () => toggleImport(true));
+
+        // Auto scroll to bottom when new message added? keep stable; only if last message empty.
+      }
+
+      function renderMessageCard(sessionId, msg){
+        const wrap = document.createElement("div");
+        wrap.className = "msg " + (msg.role === "user" ? "user" : "agent");
+        wrap.dataset.msgId = msg.id;
+
+        const left = document.createElement("div");
+        left.className = "msg-left";
+
+        const top = document.createElement("div");
+        top.className = "msg-top";
+
+        const role = document.createElement("div");
+        role.className = "role";
+        role.innerHTML = `
+          ${msg.role === "user" ? "用户提问" : "智能体回复"}
+          <span class="tag">${msg.role === "user" ? "USER" : "DEEPSEEK"}</span>
+        `;
+
+        const time = document.createElement("div");
+        time.className = "time";
+        time.textContent = fmtTime(msg.createdAt);
+
+        top.appendChild(role);
+        top.appendChild(time);
+
+        const content = document.createElement("div");
+        content.className = "msg-content";
+        content.textContent = msg.content || "";
+
+        const actions = document.createElement("div");
+        actions.className = "msg-actions";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn small";
+        btnEdit.textContent = "✏️ 编辑";
+        btnEdit.addEventListener("click", () => openMessageEditor(sessionId, msg.id));
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn small danger";
+        btnDel.textContent = "🗑️ 删除";
+        btnDel.addEventListener("click", () => {
+          confirmModal({
+            title: "删除消息",
+            body: "确定删除这条消息吗？该操作不可恢复。",
+            dangerText: "确认删除",
+            onConfirm: () => deleteMessage(sessionId, msg.id)
+          });
+        });
+
+        actions.appendChild(btnEdit);
+
+        if(msg.role === "agent"){
+          const btnCopy = document.createElement("button");
+          btnCopy.className = "btn small";
+          btnCopy.textContent = "📋 复制";
+          btnCopy.addEventListener("click", () => copyText(msg.content || ""));
+          actions.appendChild(btnCopy);
+        }
+
+        actions.appendChild(btnDel);
+
+        left.appendChild(top);
+        left.appendChild(content);
+        left.appendChild(actions);
+        wrap.appendChild(left);
+        return wrap;
+      }
+
+      function openMessageEditor(sessionId, messageId){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+        const m = s.messages.find(x => x.id === messageId);
+        if(!m) return;
+
+        const card = elMessageList.querySelector(`[data-msg-id="${messageId}"]`);
+        if(!card) return;
+
+        const left = card.querySelector(".msg-left");
+        if(!left) return;
+
+        // Build editor
+        const editor = document.createElement("div");
+        editor.className = "inline-editor";
+        const ta = document.createElement("textarea");
+        ta.className = "textarea";
+        ta.value = m.content || "";
+
+        const btnRow = document.createElement("div");
+        btnRow.className = "row wrap";
+        btnRow.style.justifyContent = "flex-end";
+
+        const btnCancel = document.createElement("button");
+        btnCancel.className = "btn";
+        btnCancel.textContent = "取消";
+
+        const btnSave = document.createElement("button");
+        btnSave.className = "btn primary";
+        btnSave.textContent = "保存";
+
+        btnRow.appendChild(btnCancel);
+        btnRow.appendChild(btnSave);
+        editor.appendChild(ta);
+        editor.appendChild(btnRow);
+
+        // Replace content + actions area with editor, keep top row
+        const top = left.querySelector(".msg-top");
+        const oldContent = left.querySelector(".msg-content");
+        const oldActions = left.querySelector(".msg-actions");
+        if(oldContent) oldContent.style.display = "none";
+        if(oldActions) oldActions.style.display = "none";
+        left.appendChild(editor);
+
+        const teardown = () => {
+          editor.remove();
+          if(oldContent) oldContent.style.display = "";
+          if(oldActions) oldActions.style.display = "";
+        };
+
+        btnCancel.addEventListener("click", teardown);
+        btnSave.addEventListener("click", () => {
+          updateMessage(sessionId, messageId, ta.value);
+        });
+
+        // Auto focus
+        setTimeout(() => ta.focus(), 0);
+      }
+
+      function openRenameInline(sessionId){
+        const s = state.sessions.find(x => x.id === sessionId);
+        if(!s) return;
+
+        // Turn header title into an input
+        const titleEl = elMainHeader.querySelector(".main-title h1");
+        if(!titleEl) return;
+
+        const parent = titleEl.parentElement;
+        if(!parent) return;
+
+        // prevent multiple
+        if(parent.querySelector("input")) return;
+
+        const input = document.createElement("input");
+        input.className = "input";
+        input.value = s.title || "";
+        input.style.maxWidth = "520px";
+
+        const btnRow = document.createElement("div");
+        btnRow.className = "row wrap";
+        btnRow.style.marginTop = "10px";
+        btnRow.style.gap = "8px";
+
+        const btnCancel = document.createElement("button");
+        btnCancel.className = "btn";
+        btnCancel.textContent = "取消";
+
+        const btnSave = document.createElement("button");
+        btnSave.className = "btn primary";
+        btnSave.textContent = "保存";
+
+        btnRow.appendChild(btnCancel);
+        btnRow.appendChild(btnSave);
+
+        titleEl.style.display = "none";
+        parent.insertBefore(input, titleEl);
+        parent.insertBefore(btnRow, parent.querySelector(".sub"));
+
+        const teardown = () => {
+          input.remove();
+          btnRow.remove();
+          titleEl.style.display = "";
+        };
+
+        btnCancel.addEventListener("click", teardown);
+        btnSave.addEventListener("click", () => {
+          renameSession(sessionId, input.value);
+        });
+
+        input.addEventListener("keydown", (e) => {
+          if(e.key === "Enter"){
+            e.preventDefault();
+            renameSession(sessionId, input.value);
+          }
+          if(e.key === "Escape"){
+            e.preventDefault();
+            teardown();
+          }
+        });
+        setTimeout(() => input.focus(), 0);
+      }
+
+      function toggleImport(show){
+        const shouldShow = (typeof show === "boolean") ? show : (elImportCard.style.display === "none");
+        elImportCard.style.display = shouldShow ? "block" : "none";
+        if(shouldShow){
+          setTimeout(() => elImportText.focus(), 0);
+        }
+      }
+
+      function renderAll(){
+        renderSidebar();
+        renderMain();
+      }
+
+      // ---------- Events ----------
+      elBtnNewSession.addEventListener("click", createSession);
+      elSessionSearch.addEventListener("input", renderSidebar);
+      elSessionSort.addEventListener("change", renderSidebar);
+
+      elBtnCloseImport.addEventListener("click", () => toggleImport(false));
+      elBtnImportClear.addEventListener("click", () => {
+        elImportText.value = "";
+        elImportPreview.innerHTML = `<div class="muted" style="font-size:13px;">点击“预览解析”在这里查看将要导入的消息。</div>`;
+        elImportStats.textContent = "";
+      });
+      elBtnImportPreview.addEventListener("click", renderImportPreview);
+      elBtnImportApply.addEventListener("click", () => {
+        confirmModal({
+          title: "导入到当前会话",
+          body: "确定把解析出的消息追加到当前会话吗？（不会覆盖已有消息）",
+          confirmText: "确认导入",
+          onConfirm: applyImportToSelectedSession
+        });
+      });
+
+      // ---------- Init ----------
+      load();
+      renderAll();
+
+      // If no sessions, keep import visible hint minimal
+      // Optional: show import card when empty? keep hidden by default.
+    })();
+  </script>
+</body>
+</html>
+
