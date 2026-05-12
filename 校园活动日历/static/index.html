@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园活动日历</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">📅 校园活动日历</h1>
+            </div>
+            <div class="header-right">
+                <span class="current-time">{{ currentTime }}</span>
+                <button class="btn-theme" @click="toggleTheme" :title="isDark ? '切换亮色' : '切换暗色'">
+                    {{ isDark ? '☀️' : '🌙' }}
+                </button>
+                <button class="btn-primary" @click="showAddModal = true">
+                    + 新增活动
+                </button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 左侧筛选区 + 饼图 -->
+            <aside class="sidebar">
+                <!-- 快捷筛选 -->
+                <div class="quick-filters">
+                    <h3>快捷筛选</h3>
+                    <div class="filter-buttons">
+                        <button :class="{ active: quickFilter === 'today' }" @click="filterToday">今日</button>
+                        <button :class="{ active: quickFilter === 'week' }" @click="filterWeek">本周</button>
+                        <button :class="{ active: quickFilter === 'all' }" @click="quickFilter = 'all'; loadActivities()">全部</button>
+                    </div>
+                </div>
+
+                <!-- 月份选择器 -->
+                <div class="filter-section">
+                    <h3>月份选择</h3>
+                    <input type="month" v-model="monthPicker" @change="onMonthChange" class="month-input">
+                </div>
+
+                <!-- 分类筛选 -->
+                <div class="filter-section">
+                    <h3>活动分类</h3>
+                    <div class="category-filters">
+                        <label class="category-item" v-for="cat in categories" :key="cat.id">
+                            <input type="checkbox" :value="cat.id" v-model="selectedCategories" @change="loadActivities">
+                            <span class="cat-dot" :style="{ background: cat.color }"></span>
+                            {{ cat.name }}
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 搜索框 -->
+                <div class="filter-section">
+                    <h3>关键词搜索</h3>
+                    <div class="search-box">
+                        <input type="text" v-model="keyword" placeholder="搜索活动标题/描述..." @keyup.enter="loadActivities">
+                        <button class="btn-search" @click="loadActivities">🔍</button>
+                    </div>
+                </div>
+
+                <!-- 数据统计饼图 -->
+                <div class="filter-section chart-section">
+                    <h3>本月分类占比</h3>
+                    <canvas id="categoryChart" width="240" height="240"></canvas>
+                </div>
+            </aside>
+
+            <!-- 核心区域：日历 + 活动详情 -->
+            <main class="content">
+                <div class="calendar-and-detail">
+                    <!-- 日历网格 -->
+                    <section class="calendar-section">
+                        <div class="calendar-header">
+                            <button class="btn-nav" @click="prevMonth">&lt;</button>
+                            <h2>{{ currentYear }}年{{ currentMonth }}月</h2>
+                            <button class="btn-nav" @click="nextMonth">&gt;</button>
+                        </div>
+                        <div class="calendar-grid">
+                            <!-- 星期行 -->
+                            <div class="weekday" v-for="day in weekdays" :key="day">{{ day }}</div>
+                            <!-- 日期格子 -->
+                            <div
+                                class="day-cell"
+                                v-for="(cell, idx) in calendarCells"
+                                :key="idx"
+                                :class="{
+                                    'other-month': !cell.isCurrentMonth,
+                                    'today': cell.isToday,
+                                    'selected': cell.isCurrentMonth && selectedDate === cell.dateStr,
+                                    'has-activity': cell.hasActivity
+                                }"
+                                @click="selectDate(cell)"
+                            >
+                                <span class="day-number">{{ cell.day }}</span>
+                                <div class="activity-dots" v-if="cell.activityColors && cell.activityColors.length">
+                                    <span class="dot" v-for="(c, i) in cell.activityColors.slice(0, 3)" :key="i" :style="{ background: c }"></span>
+                                    <span class="activity-count" v-if="cell.activityCount > 3">+{{ cell.activityCount - 3 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 右侧活动详情 -->
+                    <section class="detail-section">
+                        <div class="detail-header">
+                            <h2 v-if="selectedDate">{{ selectedDate }} 活动列表</h2>
+                            <h2 v-else>点击日期查看活动</h2>
+                        </div>
+
+                        <div v-if="loading" class="loading">
+                            <div class="spinner"></div>
+                            <span>加载中...</span>
+                        </div>
+
+                        <div v-else-if="detailActivities.length === 0" class="empty-state">
+                            <p>{{ selectedDate ? '该日暂无活动' : '请选择一个日期' }}</p>
+                        </div>
+
+                        <div v-else class="activity-list">
+                            <div
+                                class="activity-card"
+                                v-for="act in detailActivities"
+                                :key="act.id"
+                                :style="{ borderLeftColor: act.category ? act.category.color : '#ccc' }"
+                            >
+                                <div class="card-header">
+                                    <span class="card-title" v-html="highlightKeyword(act.title)"></span>
+                                    <span class="card-status" :class="{ cancelled: act.status === '已取消' }">{{ act.status }}</span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-desc" v-html="highlightKeyword(act.description)"></p>
+                                    <div class="card-meta">
+                                        <span>📍 {{ act.location || '待定' }}</span>
+                                        <span>🕐 {{ formatTime(act.start_time) }} - {{ formatTime(act.end_time) }}</span>
+                                        <span>👤 {{ act.publisher || '未知' }}</span>
+                                        <span class="card-category" v-if="act.category" :style="{ background: act.category.color + '20', color: act.category.color }">
+                                            {{ act.category.name }}
+                                        </span>
+                                    </div>
+                                    <div class="countdown-bar" v-if="countdowns[act.id]">
+                                        <span v-if="countdowns[act.id].status === '未开始'">
+                                            ⏳ 距离开始：{{ formatCountdown(countdowns[act.id].seconds) }}
+                                        </span>
+                                        <span v-else-if="countdowns[act.id].status === '已开始'" class="ongoing">🔔 进行中</span>
+                                        <span v-else class="ended">已结束</span>
+                                    </div>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn-sm btn-edit" @click="editActivity(act)">编辑</button>
+                                    <button class="btn-sm btn-cancel" @click="cancelActivity(act.id)" v-if="act.status !== '已取消'">取消</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分页 -->
+                        <div class="pagination" v-if="detailPagination.total_pages > 1">
+                            <button :disabled="detailPagination.page <= 1" @click="loadDateActivities(detailPagination.page - 1)">上一页</button>
+                            <span>{{ detailPagination.page }} / {{ detailPagination.total_pages }}</span>
+                            <button :disabled="detailPagination.page >= detailPagination.total_pages" @click="loadDateActivities(detailPagination.page + 1)">下一页</button>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+
+        <!-- 新增/编辑活动模态框 -->
+        <div class="modal-overlay" v-if="showAddModal || showEditModal" @click.self="closeModal">
+            <div class="modal">
+                <h2>{{ showEditModal ? '编辑活动' : '新增活动' }}</h2>
+                <form @submit.prevent="submitActivity">
+                    <div class="form-group">
+                        <label>活动标题 *</label>
+                        <input type="text" v-model="form.title" required placeholder="请输入活动标题">
+                    </div>
+                    <div class="form-group">
+                        <label>活动分类 *</label>
+                        <select v-model="form.category_id" required>
+                            <option value="">请选择分类</option>
+                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>开始时间 *</label>
+                            <input type="datetime-local" v-model="form.start_time" required>
+                        </div>
+                        <div class="form-group">
+                            <label>结束时间 *</label>
+                            <input type="datetime-local" v-model="form.end_time" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>活动地点</label>
+                        <input type="text" v-model="form.location" placeholder="请输入地点">
+                    </div>
+                    <div class="form-group">
+                        <label>发布者</label>
+                        <input type="text" v-model="form.publisher" placeholder="请输入发布者">
+                    </div>
+                    <div class="form-group">
+                        <label>活动描述</label>
+                        <textarea v-model="form.description" rows="3" placeholder="请输入活动描述"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" @click="closeModal">取消</button>
+                        <button type="submit" class="btn-primary" :disabled="submitting">{{ submitting ? '提交中...' : '提交' }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 导出按钮 -->
+        <div class="export-bar">
+            <button class="btn-export" @click="exportJSON">导出JSON</button>
+            <button class="btn-export" @click="exportICal">导出iCal</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
