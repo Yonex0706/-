@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园二手交易平台</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="nav-inner">
+        <a class="nav-brand" href="#" @click.prevent="goHome">📚 校园二手</a>
+        <div class="nav-links">
+          <a href="#" @click.prevent="goHome">首页</a>
+          <a href="#" @click.prevent="goPublish" v-if="currentUser">发布</a>
+          <a href="#" @click.prevent="goPage('my-items')" v-if="currentUser">我的发布</a>
+          <a href="#" @click.prevent="goPage('favorites')" v-if="currentUser">收藏</a>
+          <a href="#" @click.prevent="goPage('profile')" v-if="currentUser">我的</a>
+          <a href="#" @click.prevent="goPage('chat')" v-if="currentUser">
+            消息 <span class="badge" v-if="unreadCount>0">{{ unreadCount }}</span>
+          </a>
+          <a href="#" @click.prevent="goPage('orders')" v-if="currentUser">订单</a>
+          <a href="#" @click.prevent="goPage('admin')" v-if="isAdmin">管理</a>
+          <template v-if="currentUser">
+            <span class="nav-user">{{ currentUser.username }}</span>
+            <a href="#" @click.prevent="logout">退出</a>
+          </template>
+          <a href="#" @click.prevent="goPage('login')" v-else>登录</a>
+        </div>
+        <button class="nav-toggle" @click="navOpen=!navOpen">☰</button>
+      </div>
+      <div class="nav-mobile" v-show="navOpen">
+        <a href="#" @click.prevent="goHome;navOpen=false">首页</a>
+        <a href="#" @click.prevent="goPublish;navOpen=false" v-if="currentUser">发布</a>
+        <a href="#" @click.prevent="goPage('my-items');navOpen=false" v-if="currentUser">我的发布</a>
+        <a href="#" @click.prevent="goPage('favorites');navOpen=false" v-if="currentUser">收藏</a>
+        <a href="#" @click.prevent="goPage('profile');navOpen=false" v-if="currentUser">我的</a>
+        <a href="#" @click.prevent="goPage('chat');navOpen=false" v-if="currentUser">消息</a>
+        <a href="#" @click.prevent="goPage('orders');navOpen=false" v-if="currentUser">订单</a>
+        <a href="#" @click.prevent="goPage('admin');navOpen=false" v-if="isAdmin">管理</a>
+        <a href="#" @click.prevent="logout;navOpen=false" v-if="currentUser">退出</a>
+        <a href="#" @click.prevent="goPage('login');navOpen=false" v-else>登录</a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container">
+      <component :is="currentComponent" @navigate="onNavigate" @refresh-fav="refreshFavorites"/>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2026 校园二手交易平台 · Web可视化课程设计</p>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
