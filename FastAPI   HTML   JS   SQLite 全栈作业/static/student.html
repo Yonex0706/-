@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理</title>
+    <style>
+        :root {
+            --primary: #4f6ef7;
+            --danger: #e74c3c;
+            --bg: #f5f7fa;
+            --card-bg: #fff;
+            --text: #2c3e50;
+            --border: #e0e5ec;
+            --radius: 10px;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        /* 顶部导航 */
+        .navbar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-right: 32px;
+            letter-spacing: -0.5px;
+        }
+        .navbar .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+        }
+        .navbar .nav-links a {
+            display: block;
+            padding: 8px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #555;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .navbar .nav-links a:hover {
+            background: #eef1ff;
+            color: var(--primary);
+        }
+        .navbar .nav-links a.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        /* 主容器 */
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 28px 20px 40px;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 22px;
+            letter-spacing: -0.5px;
+        }
+        /* 卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+        .card h3 {
+            font-size: 1.05rem;
+            margin-bottom: 16px;
+            color: #444;
+            letter-spacing: 0.5px;
+        }
+        /* 表单 */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 140px;
+        }
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+        }
+        .form-group input,
+        .form-group select {
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            background: #fafbfc;
+            outline: none;
+            color: #333;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.08);
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #3d5ce5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(79, 110, 247, 0.35);
+        }
+        .btn-danger {
+            background: #fff;
+            color: var(--danger);
+            border: 1.5px solid var(--danger);
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            border-radius: 6px;
+        }
+        .btn-danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.93rem;
+        }
+        thead th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e8ecf1;
+            font-size: 0.83rem;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+        tbody tr {
+            transition: background 0.15s;
+        }
+        tbody tr:hover {
+            background: #fafcfd;
+        }
+        .empty-row td {
+            text-align: center;
+            color: #aaa;
+            padding: 32px;
+            font-style: italic;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: #eef1ff;
+            color: #4f6ef7;
+        }
+        /* 提示消息 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 22px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            pointer-events: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-success {
+            background: #27ae60;
+        }
+        .toast-error {
+            background: #e74c3c;
+        }
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .form-row {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+            .navbar {
+                padding: 0 12px;
+            }
+            .navbar .nav-links a {
+                padding: 6px 10px;
+                font-size: 0.82rem;
+            }
+            .container {
+                padding: 16px 10px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <span class="logo">📚 教务管理</span>
+        <ul class="nav-links">
+            <li><a href="/student" class="active">👨‍🎓 学生管理</a></li>
+            <li><a href="/course">📖 课程管理</a></li>
+            <li><a href="/sc">📋 选课管理</a></li>
+        </ul>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container">
+        <h2 class="page-title">👨‍🎓 学生管理</h2>
+
+        <!-- 新增学生表单 -->
+        <div class="card">
+            <h3>➕ 新增学生</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="studentName">姓名 *</label>
+                    <input type="text" id="studentName" placeholder="请输入学生姓名" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentAge">年龄</label>
+                    <input type="number" id="studentAge" placeholder="默认18" value="18" min="1" max="120">
+                </div>
+                <button class="btn btn-primary" onclick="addStudent()">✅ 添加学生</button>
+            </div>
+        </div>
+
+        <!-- 学生列表 -->
+        <div class="card">
+            <h3>📋 学生列表（共 <span id="studentCount">0</span> 人）</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>年龄</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                    <tr class="empty-row"><td colspan="4">暂无学生数据</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // Toast提示
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast toast-' + type + ' show';
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2200);
+        }
+
+        // 加载学生列表
+        async function loadStudents() {
+            try {
+                const res = await fetch(API_BASE + '/students');
+                if (!res.ok) throw new Error('加载失败');
+                const data = await res.json();
+                const tbody = document.getElementById('studentTableBody');
+                const countSpan = document.getElementById('studentCount');
+                countSpan.textContent = data.length;
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">暂无学生数据，请先添加</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.map(s => `
+                    <tr>
+                        <td><span class="badge">${s.id}</span></td>
+                        <td><strong>${escapeHtml(s.name)}</strong></td>
+                        <td>${s.age ?? 18}</td>
+                        <td><button class="btn btn-danger" onclick="deleteStudent(${s.id})">🗑 删除</button></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showToast('加载学生列表失败: ' + err.message, 'error');
+            }
+        }
+
+        // HTML转义
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 新增学生
+        async function addStudent() {
+            const nameInput = document.getElementById('studentName');
+            const ageInput = document.getElementById('studentAge');
+            const name = nameInput.value.trim();
+            const age = parseInt(ageInput.value) || 18;
+
+            if (!name) {
+                showToast('请输入学生姓名', 'error');
+                nameInput.focus();
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, age })
+                });
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || '添加失败');
+                }
+                showToast('✅ 学生添加成功！');
+                nameInput.value = '';
+                ageInput.value = '18';
+                nameInput.focus();
+                await loadStudents();
+            } catch (err) {
+                showToast('添加失败: ' + err.message, 'error');
+            }
+        }
+
+        // 删除学生
+        async function deleteStudent(id) {
+            if (!confirm('确定要删除该学生吗？\n（该学生的所有选课记录也将被删除）')) return;
+            try {
+                const res = await fetch(API_BASE + '/students/' + id, { method: 'DELETE' });
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || '删除失败');
+                }
+                showToast('🗑 学生已删除');
+                await loadStudents();
+            } catch (err) {
+                showToast('删除失败: ' + err.message, 'error');
+            }
+        }
+
+        // 回车键提交
+        document.getElementById('studentName').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addStudent();
+        });
+        document.getElementById('studentAge').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addStudent();
+        });
+
+        // 页面加载
+        loadStudents();
+    </script>
+</body>
+</html>

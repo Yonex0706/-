@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选课管理</title>
+    <style>
+        :root {
+            --primary: #4f6ef7;
+            --danger: #e74c3c;
+            --bg: #f5f7fa;
+            --card-bg: #fff;
+            --text: #2c3e50;
+            --border: #e0e5ec;
+            --radius: 10px;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-right: 32px;
+            letter-spacing: -0.5px;
+        }
+        .navbar .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+        }
+        .navbar .nav-links a {
+            display: block;
+            padding: 8px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #555;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+        .navbar .nav-links a:hover {
+            background: #eef1ff;
+            color: var(--primary);
+        }
+        .navbar .nav-links a.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 28px 20px 40px;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 22px;
+            letter-spacing: -0.5px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+        .card h3 {
+            font-size: 1.05rem;
+            margin-bottom: 16px;
+            color: #444;
+            letter-spacing: 0.5px;
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 180px;
+        }
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+        }
+        .form-group select {
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            background: #fafbfc;
+            outline: none;
+            color: #333;
+            cursor: pointer;
+            appearance: auto;
+        }
+        .form-group select:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.08);
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #3d5ce5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(79, 110, 247, 0.35);
+        }
+        .btn-danger {
+            background: #fff;
+            color: var(--danger);
+            border: 1.5px solid var(--danger);
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            border-radius: 6px;
+        }
+        .btn-danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.93rem;
+        }
+        thead th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e8ecf1;
+            font-size: 0.83rem;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+        tbody tr:hover {
+            background: #fafcfd;
+        }
+        .empty-row td {
+            text-align: center;
+            color: #aaa;
+            padding: 32px;
+            font-style: italic;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: #eef1ff;
+            color: #4f6ef7;
+        }
+        .highlight-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 22px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            pointer-events: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-success {
+            background: #27ae60;
+        }
+        .toast-error {
+            background: #e74c3c;
+        }
+        @media (max-width: 600px) {
+            .form-row {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+            .navbar {
+                padding: 0 12px;
+            }
+            .navbar .nav-links a {
+                padding: 6px 10px;
+                font-size: 0.82rem;
+            }
+            .container {
+                padding: 16px 10px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <span class="logo">📚 教务管理</span>
+        <ul class="nav-links">
+            <li><a href="/student">👨‍🎓 学生管理</a></li>
+            <li><a href="/course">📖 课程管理</a></li>
+            <li><a href="/sc" class="active">📋 选课管理</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h2 class="page-title">📋 选课管理</h2>
+
+        <!-- 新增选课表单 -->
+        <div class="card">
+            <h3>➕ 新增选课记录</h3>
+            <p style="margin-bottom: 14px; color: #888; font-size: 0.85rem;">
+                💡 请先从下拉框中选择已存在的学生和课程
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="studentSelect">选择学生 *</label>
+                    <select id="studentSelect">
+                        <option value="">-- 请选择学生 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="courseSelect">选择课程 *</label>
+                    <select id="courseSelect">
+                        <option value="">-- 请选择课程 --</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="addSC()">✅ 提交选课</button>
+            </div>
+        </div>
+
+        <!-- 选课列表 -->
+        <div class="card">
+            <h3>📋 选课记录（共 <span id="scCount">0</span> 条）</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>学生姓名</th>
+                        <th>课程名称</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="scTableBody">
+                    <tr class="empty-row"><td colspan="4">暂无选课记录，请先添加学生和课程</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // Toast 提示
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast toast-' + type + ' show';
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2200);
+        }
+
+        // HTML 转义
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 加载下拉框选项（学生和课程）
+        async function loadSelectOptions() {
+            try {
+                // 同时请求学生和课程列表
+                const [studentRes, courseRes] = await Promise.all([
+                    fetch(API_BASE + '/students'),
+                    fetch(API_BASE + '/courses')
+                ]);
+
+                if (!studentRes.ok || !courseRes.ok) throw new Error('加载选项失败');
+
+                const students = await studentRes.json();
+                const courses = await courseRes.json();
+
+                // 填充学生下拉框
+                const studentSelect = document.getElementById('studentSelect');
+                studentSelect.innerHTML = '<option value="">-- 请选择学生 --</option>';
+                students.forEach(s => {
+                    studentSelect.innerHTML += `<option value="${s.id}">${escapeHtml(s.name)} (ID: ${s.id}, 年龄: ${s.age ?? 18})</option>`;
+                });
+
+                // 填充课程下拉框
+                const courseSelect = document.getElementById('courseSelect');
+                courseSelect.innerHTML = '<option value="">-- 请选择课程 --</option>';
+                courses.forEach(c => {
+                    courseSelect.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)} (ID: ${c.id})</option>`;
+                });
+            } catch (err) {
+                showToast('加载选项失败: ' + err.message, 'error');
+            }
+        }
+
+        // 加载选课列表
+        async function loadSCList() {
+            try {
+                const res = await fetch(API_BASE + '/sc');
+                if (!res.ok) throw new Error('加载失败');
+                const data = await res.json();
+                const tbody = document.getElementById('scTableBody');
+                const countSpan = document.getElementById('scCount');
+                countSpan.textContent = data.length;
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">暂无选课记录，请先添加学生和课程</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(r => `
+                    <tr>
+                        <td><span class="badge">${r.id}</span></td>
+                        <td><span class="highlight-name">👨‍🎓 ${escapeHtml(r.student_name)}</span></td>
+                        <td><span class="highlight-name">📖 ${escapeHtml(r.course_name)}</span></td>
+                        <td><button class="btn btn-danger" onclick="deleteSC(${r.id})">🗑 删除</button></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showToast('加载选课列表失败: ' + err.message, 'error');
+            }
+        }
+
+        // 新增选课
+        async function addSC() {
+            const studentSelect = document.getElementById('studentSelect');
+            const courseSelect = document.getElementById('courseSelect');
+            const studentId = studentSelect.value;
+            const courseId = courseSelect.value;
+
+            if (!studentId) {
+                showToast('请选择一个学生', 'error');
+                studentSelect.focus();
+                return;
+            }
+            if (!courseId) {
+                showToast('请选择一门课程', 'error');
+                courseSelect.focus();
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/sc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_id: parseInt(studentId),
+                        course_id: parseInt(courseId)
+                    })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || '选课失败');
+                }
+
+                showToast('✅ 选课成功！');
+                // 重置下拉框
+                studentSelect.value = '';
+                courseSelect.value = '';
+                // 刷新选课列表
+                await loadSCList();
+            } catch (err) {
+                showToast('选课失败: ' + err.message, 'error');
+            }
+        }
+
+        // 删除选课
+        async function deleteSC(id) {
+            if (!confirm('确定要删除这条选课记录吗？')) return;
+            try {
+                const res = await fetch(API_BASE + '/sc/' + id, { method: 'DELETE' });
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || '删除失败');
+                }
+                showToast('🗑 选课记录已删除');
+                await loadSCList();
+            } catch (err) {
+                showToast('删除失败: ' + err.message, 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        async function init() {
+            await loadSelectOptions();
+            await loadSCList();
+        }
+
+        init();
+    </script>
+</body>
+</html>
